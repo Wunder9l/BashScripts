@@ -55,15 +55,43 @@ else
 fi
 }  
 
+function set_uid() {
+if [ "$uid" == "" ]; then
+    uid_arg=""
+else
+    uid_arg="-u$uid"
+fi
+}  
+
+function check_shell_path(){
+if [ "$shell" == "" ]; then
+    shell_arg=""
+    return 0 
+elif [ -x "$shell" ]; then
+    shell_arg="-s$shell"
+    return 0
+else
+    shell_arg=""
+    echo "Shell path ($shell) does not exist or not not executable"
+    return 1
+fi
+
 function check_homedir(){
 if [ "$homedir" == "" ]; then
     homedir="/home/$username/"
     check_homedir
     return $? 
 elif [ -d "$homedir" ]; then
-    echo directory $homedir already exists
-    homedir_arg=""
-    return 1
+    if [ $(cat /etc/passwd | grep "::$homedir:") ]; then
+        echo "another user is an owner of $homedir"
+        return 1
+    else
+        echo no user has $homedir as home directory
+        return 0
+    fi
+#    echo directory $homedir already exists
+#    homedir_arg=""
+#    return 1
 else
     homedir_arg="-d$homedir"
     return 0
@@ -83,27 +111,36 @@ if [ "$username" != "" ]; then
 if [ $(getent passwd $username) ]; then
     echo "User $username already exists"
 else
-    check_homedir
-    local res=$?
-    if [ $res -eq 0 ];then
-        set_groups_arg
-        set_password_arg
-        set_primary_group_arg
-        echo useradd: $username $passw_arg $primary_group_arg $groups_arg $homedir_arg
-        useradd $username $passw_arg $primary_group_arg $groups_arg $homedir_arg
-        echo mkdir $homedir
-        mkdir $homedir
-        echo chown -R $username $homedir
-        chown -R $username $homedir
+    check_shell
+    if [ $? -eq 0]; then
+      check_homedir
+      local res=$?
+      if [ $res -eq 0 ];then
+          set_groups_arg
+          set_password_arg
+          set_primary_group_arg
+          set_uid
+          echo useradd: $username $passw_arg $primary_group_arg $groups_arg $homedir_arg $shell_arg $uid_arg
+          useradd $username $passw_arg $primary_group_arg $groups_arg $homedir_arg $shell_arg $uid_arg
+          echo mkdir $homedir
+          mkdir $homedir
+          echo chown -R $username $homedir
+          chown -R $username $homedir
+      else
+          echo Can not create user $username  with homedir=$homedir
+      fi
     else
-        echo Can not create user with homedir=$homedir
+        echo Can not create user $username with shell path=$shell
     fi
+
 fi; fi
 username=""
 groups=""
 primary=""
 password=""
 homedir=""
+uid=""
+shell=""
 }
 ####### END OF FUNCTIONS ########
 
@@ -117,12 +154,16 @@ USERNAME_LABEL="Username"
 PASSWORD_LABEL="Password"
 HOMEDIR_LABEL="Homedir"
 PRIMARY_GROUP_LABEL="PrimaryGroup"
+UID_LABLE="Uid"
+SHELL_LABEL="Shell"
 
 username=""
 groups=""
 primary=""
 password=""
 homedir=""
+uid=""
+shell=""
 
 IFS="="
 while read -r name value
@@ -139,6 +180,10 @@ do
         groups="$value"
     elif [ "$name" == "$PRIMARY_GROUP_LABEL" ]; then
         primary="$value"
+    elif [ "$name" == "$UID_LABEL" ]; then
+        uid="$value"
+    elif [ "$name" == "$SHELL_LABEL" ]; then
+        shell="$value"
     elif [ "$name" != "" ]; then
         echo "Non valid option $name"    
     fi

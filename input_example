@@ -8,11 +8,12 @@ Password=somehash2
 Groups=Gr2
 PrimaryGroup=user2Group
 Homedir=/home/user2
+Shell=/usr/sbin
 
 Username=user3
 Password=somehash2
 Groups=Gr3,Gr4,Gr5
-
+Uid=1234
 
 Username=user4
 Password=somehash2
