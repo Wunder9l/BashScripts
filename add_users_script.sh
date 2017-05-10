@@ -75,6 +75,7 @@ else
     echo "Shell path ($shell) does not exist or not not executable"
     return 1
 fi
+}
 
 function check_homedir(){
 if [ "$homedir" == "" ]; then
@@ -93,6 +94,8 @@ elif [ -d "$homedir" ]; then
 #    homedir_arg=""
 #    return 1
 else
+    echo mkdir $homedir
+    mkdir $homedir
     homedir_arg="-d$homedir"
     return 0
 fi
@@ -111,19 +114,16 @@ if [ "$username" != "" ]; then
 if [ $(getent passwd $username) ]; then
     echo "User $username already exists"
 else
-    check_shell
-    if [ $? -eq 0]; then
+    check_shell_path
+    if [ $? -eq 0 ]; then
       check_homedir
-      local res=$?
-      if [ $res -eq 0 ];then
+      if [ $? -eq 0 ];then
           set_groups_arg
           set_password_arg
           set_primary_group_arg
           set_uid
           echo useradd: $username $passw_arg $primary_group_arg $groups_arg $homedir_arg $shell_arg $uid_arg
           useradd $username $passw_arg $primary_group_arg $groups_arg $homedir_arg $shell_arg $uid_arg
-          echo mkdir $homedir
-          mkdir $homedir
           echo chown -R $username $homedir
           chown -R $username $homedir
       else
@@ -192,3 +192,4 @@ done < "$filename"
 else  #If the user Specified file doesn't Exists
 	echo -e "\nCANNOT FIND or LOCATE THE FILE"
 fi;
+
