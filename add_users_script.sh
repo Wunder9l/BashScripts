@@ -109,6 +109,12 @@ else
 fi
 }
 
+function change_owner(){
+local gid=$(id -g $username)
+echo chown -R $username:$gid $homedir
+chown -R $username:$gid $homedir
+}
+
 function add_user(){
 if [ "$username" != "" ]; then
 if [ $(getent passwd $username) ]; then
@@ -124,8 +130,7 @@ else
           set_uid
           echo useradd: $username $passw_arg $primary_group_arg $groups_arg $homedir_arg $shell_arg $uid_arg
           useradd $username $passw_arg $primary_group_arg $groups_arg $homedir_arg $shell_arg $uid_arg
-          echo chown -R $username $homedir
-          chown -R $username $homedir
+          change_owner
       else
           echo Can not create user $username  with homedir=$homedir
       fi
@@ -188,6 +193,7 @@ do
         echo "Non valid option $name"    
     fi
 done < "$filename"
+add_user $username $password $groups $homedir
 
 else  #If the user Specified file doesn't Exists
 	echo -e "\nCANNOT FIND or LOCATE THE FILE"
